@@ -1,26 +1,18 @@
 ﻿using Clean.Architecture.Core.ContributorAggregate.Events;
-using MediatR;
-using Microsoft.Extensions.Logging;
+using Clean.Architecture.Core.Interfaces;
 
 namespace Clean.Architecture.Core.ContributorAggregate.Handlers;
 
-/// <summary>
-/// NOTE: Internal because ContributorDeleted is also marked as internal.
-/// </summary>
-internal class ContributorDeletedHandler : INotificationHandler<ContributorDeletedEvent>
+public class ContributorDeletedHandler(ILogger<ContributorDeletedHandler> logger,
+  IEmailSender emailSender) : INotificationHandler<ContributorDeletedEvent>
 {
-  private readonly ILogger<ContributorDeletedHandler> _logger;
-
-  public ContributorDeletedHandler(ILogger<ContributorDeletedHandler> logger)
+  public async ValueTask Handle(ContributorDeletedEvent domainEvent, CancellationToken cancellationToken)
   {
-    _logger = logger;
-  }
+    logger.LogInformation("Handling Contributed Deleted event for {contributorId}", domainEvent.ContributorId);
 
-  public async Task Handle(ContributorDeletedEvent domainEvent, CancellationToken cancellationToken)
-  {
-    _logger.LogInformation("Handling Contributed Deleted event for {contributorId}", domainEvent.ContributorId);
-
-    // TODO: do meaningful work here
-    await Task.Delay(1);
+    await emailSender.SendEmailAsync("to@test.com",
+                                     "from@test.com",
+                                     "Contributor Deleted",
+                                     $"Contributor with id {domainEvent.ContributorId} was deleted.");
   }
 }

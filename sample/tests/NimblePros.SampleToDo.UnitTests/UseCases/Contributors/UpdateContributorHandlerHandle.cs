@@ -1,20 +1,14 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
-using Ardalis.Specification;
-using FluentAssertions;
-using NimblePros.SampleToDo.Core.ContributorAggregate;
+﻿using NimblePros.SampleToDo.Core.ContributorAggregate;
 using NimblePros.SampleToDo.Core.ContributorAggregate.Specifications;
-using NimblePros.SampleToDo.UseCases.Contributors.Update;
-using NSubstitute;
-using NSubstitute.ReturnsExtensions;
-using Xunit;
+using NimblePros.SampleToDo.UseCases.Contributors.Commands.Update;
+using Shouldly;
 
 namespace NimblePros.SampleToDo.UnitTests.UseCases.Contributors;
 
 public class UpdateContributorHandlerHandle
 {
-  private readonly string _testName = "test name";
-  private readonly string _newName = Guid.NewGuid().ToString();
+  private readonly ContributorName _testName = ContributorName.From("test name");
+  private readonly ContributorName _newName = ContributorName.From(Guid.NewGuid().ToString());
   private readonly IRepository<Contributor> _repository = Substitute.For<IRepository<Contributor>>();
   private UpdateContributorHandler _handler;
 
@@ -26,23 +20,23 @@ public class UpdateContributorHandlerHandle
   [Fact]
   public async Task ReturnsRecordGivenValidId()
   {
-    int validId = 1;
-    _repository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-      .Returns(new Contributor(_testName));
+    ContributorId validId = ContributorId.From(1);
+    _repository.SingleOrDefaultAsync(Arg.Any<ContributorByIdSpec>(), Arg.Any<CancellationToken>())
+      .Returns(new Contributor(_testName) { Id = ContributorId.From(1)});
     var result = await _handler.Handle(new UpdateContributorCommand(validId, _newName), CancellationToken.None);
 
-    result.IsSuccess.Should().BeTrue();
-    result.Value.Name.Should().Be(_newName);
+    result.IsSuccess.ShouldBeTrue();
+    result.Value.Name.ShouldBe(_newName);
   }
 
   [Fact]
-  public async Task ReturnsNotFoundGivenInvalidId()
+  public async Task ReturnsNotFoundGivenNonexistentId()
   {
-    int invalidId = 1000;
+    ContributorId nonexistentId = ContributorId.From(1000);
     _repository.GetByIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).ReturnsNull();
-    var result = await _handler.Handle(new UpdateContributorCommand(invalidId, _newName), CancellationToken.None);
+    var result = await _handler.Handle(new UpdateContributorCommand(nonexistentId, _newName), CancellationToken.None);
 
-    result.IsSuccess.Should().BeFalse();
-    result.Status.Should().Be(ResultStatus.NotFound);
+    result.IsSuccess.ShouldBeFalse();
+    result.Status.ShouldBe(ResultStatus.NotFound);
   }
 }

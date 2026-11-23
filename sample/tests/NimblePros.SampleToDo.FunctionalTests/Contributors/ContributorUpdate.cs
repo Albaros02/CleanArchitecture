@@ -1,8 +1,6 @@
-﻿using Ardalis.HttpClientTestExtensions;
-using FluentAssertions;
-using NimblePros.SampleToDo.Web;
+﻿using NimblePros.SampleToDo.Web;
 using NimblePros.SampleToDo.Web.Contributors;
-using Xunit;
+using Shouldly;
 
 namespace NimblePros.SampleToDo.FunctionalTests.Contributors;
 
@@ -20,15 +18,15 @@ public class ContributorUpdate : IClassFixture<CustomWebApplicationFactory<Progr
   public async Task UpdatesContributorNameAndReturnsUpdatedRecord()
   {
     var newName = Guid.NewGuid().ToString();
-    var request = new UpdateContributorRequest() { Id = SeedData.Contributor1.Id, Name = newName };
-    var putRoute = UpdateContributorRequest.BuildRoute(SeedData.Contributor1.Id);
+    var request = new UpdateContributorRequest() { Id = SeedData.Contributor1.Id.Value, Name = newName };
+    var putRoute = UpdateContributorRequest.BuildRoute(SeedData.Contributor1.Id.Value);
 
     var content = StringContentHelpers.FromModelAsJson(request);
 
     var result = await _client.PutAndDeserializeAsync<UpdateContributorResponse>(putRoute, content);
 
-    result.Contributor.Name.Should().Be(newName);
-    result.Contributor.Id.Should().BeGreaterThan(0);
+    result.Contributor.Name.ShouldBe(newName);
+    result.Contributor.Id.ShouldBeGreaterThan(0);
   }
 
   [Fact]
@@ -53,5 +51,4 @@ public class ContributorUpdate : IClassFixture<CustomWebApplicationFactory<Progr
 
     _ = await _client.PutAndEnsureBadRequestAsync(putRoute, content);
   }
-
 }

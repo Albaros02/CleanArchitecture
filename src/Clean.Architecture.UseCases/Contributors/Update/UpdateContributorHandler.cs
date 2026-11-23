@@ -1,30 +1,24 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
-using Clean.Architecture.Core.ContributorAggregate;
+﻿using Clean.Architecture.Core.ContributorAggregate;
 
 namespace Clean.Architecture.UseCases.Contributors.Update;
 
-public class UpdateContributorHandler : ICommandHandler<UpdateContributorCommand, Result<ContributorDTO>>
+public class UpdateContributorHandler(IRepository<Contributor> _repository)
+  : ICommandHandler<UpdateContributorCommand, Result<ContributorDto>>
 {
-  private readonly IRepository<Contributor> _repository;
-
-  public UpdateContributorHandler(IRepository<Contributor> repository)
+  public async ValueTask<Result<ContributorDto>> Handle(UpdateContributorCommand command, 
+    CancellationToken ct)
   {
-    _repository = repository;
-  }
-
-  public async Task<Result<ContributorDTO>> Handle(UpdateContributorCommand request, CancellationToken cancellationToken)
-  {
-    var existingContributor = await _repository.GetByIdAsync(request.ContributorId, cancellationToken);
+    var existingContributor = await _repository.GetByIdAsync(command.ContributorId, ct);
     if (existingContributor == null)
     {
       return Result.NotFound();
     }
 
-    existingContributor.UpdateName(request.NewName!);
+    existingContributor.UpdateName(command.NewName);
 
-    await _repository.UpdateAsync(existingContributor, cancellationToken);
+    await _repository.UpdateAsync(existingContributor, ct);
 
-    return Result.Success(new ContributorDTO(existingContributor.Id, existingContributor.Name));
+    return new ContributorDto(existingContributor.Id,
+      existingContributor.Name, existingContributor.PhoneNumber ?? PhoneNumber.Unknown);
   }
 }

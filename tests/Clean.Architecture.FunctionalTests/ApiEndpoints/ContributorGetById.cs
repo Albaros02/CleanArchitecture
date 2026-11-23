@@ -1,28 +1,21 @@
-﻿using Ardalis.HttpClientTestExtensions;
-using Clean.Architecture.Web;
-using Clean.Architecture.Web.ContributorEndpoints;
-using Clean.Architecture.Web.Endpoints.ContributorEndpoints;
-using Xunit;
+﻿using Clean.Architecture.Infrastructure.Data;
+using Clean.Architecture.Web.Contributors;
+
 
 namespace Clean.Architecture.FunctionalTests.ApiEndpoints;
 
 [Collection("Sequential")]
-public class ContributorGetById : IClassFixture<CustomWebApplicationFactory<Program>>
+public class ContributorGetById(CustomWebApplicationFactory<Program> factory) : IClassFixture<CustomWebApplicationFactory<Program>>
 {
-  private readonly HttpClient _client;
-
-  public ContributorGetById(CustomWebApplicationFactory<Program> factory)
-  {
-    _client = factory.CreateClient();
-  }
+  private readonly HttpClient _client = factory.CreateClient();
 
   [Fact]
   public async Task ReturnsSeedContributorGivenId1()
   {
     var result = await _client.GetAndDeserializeAsync<ContributorRecord>(GetContributorByIdRequest.BuildRoute(1));
 
-    Assert.Equal(1, result.Id);
-    Assert.Equal(SeedData.Contributor1.Name, result.Name);
+    result.Id.ShouldBe(1);
+    result.Name.ShouldBe(SeedData.Contributor1Name.Value);
   }
 
   [Fact]

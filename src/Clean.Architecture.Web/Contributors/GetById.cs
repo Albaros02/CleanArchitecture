@@ -1,48 +1,57 @@
-﻿using FastEndpoints;
-using MediatR;
-using Ardalis.Result;
-using Clean.Architecture.Web.Endpoints.ContributorEndpoints;
-using Clean.Architecture.UseCases.Contributors.Get;
+﻿using Clean.Architecture.Core.ContributorAggregate;
+using Clean.Architecture.UseCases.Contributors;
+using Clean.Architecture.UseCases.Contributors.GetById;
+using Clean.Architecture.Web.Extensions;
+using Microsoft.AspNetCore.Http.HttpResults;
 
-namespace Clean.Architecture.Web.ContributorEndpoints;
+namespace Clean.Architecture.Web.Contributors;
 
-/// <summary>
-/// Get a Contributor by integer ID.
-/// </summary>
-/// <remarks>
-/// Takes a positive integer ID and returns a matching Contributor record.
-/// </remarks>
-public class GetById : Endpoint<GetContributorByIdRequest, ContributorRecord>
+public class GetById(IMediator mediator)
+  : Endpoint<GetContributorByIdRequest,
+             Results<Ok<ContributorRecord>,
+                     NotFound,
+                     ProblemHttpResult>,
+             GetContributorByIdMapper>
 {
-  private readonly IMediator _mediator;
-
-  public GetById(IMediator mediator)
-  {
-    _mediator = mediator;
-  }
-
   public override void Configure()
   {
     Get(GetContributorByIdRequest.Route);
     AllowAnonymous();
+
+    // Optional: document statuses for Swagger
+    Summary(s =>
+    {
+      s.Summary = "Get a contributor by ID";
+      s.Description = "Retrieves a specific contributor by their unique identifier. Returns detailed contributor information including ID and name.";
+      s.ExampleRequest = new GetContributorByIdRequest { ContributorId = 1 };
+      s.ResponseExamples[200] = new ContributorRecord(1, "John Doe", "+1 555-555-5555");
+
+      // Document possible responses
+      s.Responses[200] = "Contributor found and returned successfully";
+      s.Responses[404] = "Contributor with specified ID not found";
+    });
+
+    // Add tags for API grouping
+    Tags("Contributors");
+
+    // Add additional metadata
+    Description(builder => builder
+      .Accepts<GetContributorByIdRequest>()
+      .Produces<ContributorRecord>(200, "application/json")
+      .ProducesProblem(404));
   }
 
-  public override async Task HandleAsync(GetContributorByIdRequest request,
-    CancellationToken cancellationToken)
+  public override async Task<Results<Ok<ContributorRecord>, NotFound, ProblemHttpResult>>
+    ExecuteAsync(GetContributorByIdRequest request, CancellationToken ct)
   {
-    var command = new GetContributorQuery(request.ContributorId);
+    var result = await mediator.Send(new GetContributorByIdQuery(ContributorId.From(request.ContributorId)), ct);
 
-    var result = await _mediator.Send(command);
-
-    if (result.Status == ResultStatus.NotFound)
-    {
-      await SendNotFoundAsync(cancellationToken);
-      return;
-    }
-
-    if (result.IsSuccess)
-    {
-      Response = new ContributorRecord(result.Value.Id, result.Value.Name);
-    }
+    return result.ToGetByIdResult(Map.FromEntity);
   }
+}
+public sealed class GetContributorByIdMapper
+  : Mapper<GetContributorByIdRequest, ContributorRecord, ContributorDto>
+{
+  public override ContributorRecord FromEntity(ContributorDto e)
+    => new(e.Id.Value, e.Name.Value, e.PhoneNumber.ToString());
 }

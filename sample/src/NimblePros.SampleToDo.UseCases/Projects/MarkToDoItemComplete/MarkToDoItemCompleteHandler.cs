@@ -1,6 +1,4 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
-using NimblePros.SampleToDo.Core.ProjectAggregate;
+﻿using NimblePros.SampleToDo.Core.ProjectAggregate;
 using NimblePros.SampleToDo.Core.ProjectAggregate.Specifications;
 
 namespace NimblePros.SampleToDo.UseCases.Projects.MarkToDoItemComplete;
@@ -14,7 +12,7 @@ public class MarkToDoItemCompleteHandler : ICommandHandler<MarkToDoItemCompleteC
     _repository = repository;
   }
 
-  public async Task<Result> Handle(MarkToDoItemCompleteCommand request,
+  public async ValueTask<Result> Handle(MarkToDoItemCompleteCommand request,
     CancellationToken cancellationToken)
   {
     var spec = new ProjectByIdWithItemsSpec(request.ProjectId);

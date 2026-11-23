@@ -1,10 +1,7 @@
-﻿using Ardalis.Result;
+﻿using Microsoft.Extensions.Logging;
 using NimblePros.SampleToDo.Core.ContributorAggregate;
 using NimblePros.SampleToDo.Core.ContributorAggregate.Events;
 using NimblePros.SampleToDo.Core.Interfaces;
-using Ardalis.SharedKernel;
-using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace NimblePros.SampleToDo.Core.Services;
 
@@ -23,7 +20,7 @@ public class DeleteContributorService : IDeleteContributorService
     _logger = logger;
   }
 
-  public async Task<Result> DeleteContributor(int contributorId)
+  public async Task<Result> DeleteContributor(ContributorId contributorId)
   {
     _logger.LogInformation("Deleting Contributor {contributorId}", contributorId);
     var aggregateToDelete = await _repository.GetByIdAsync(contributorId);

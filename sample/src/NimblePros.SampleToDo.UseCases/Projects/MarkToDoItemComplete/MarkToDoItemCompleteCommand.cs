@@ -1,4 +1,4 @@
-﻿using Ardalis.Result;
+﻿using NimblePros.SampleToDo.Core.ProjectAggregate;
 
 namespace NimblePros.SampleToDo.UseCases.Projects.MarkToDoItemComplete;
 
@@ -6,4 +6,4 @@ namespace NimblePros.SampleToDo.UseCases.Projects.MarkToDoItemComplete;
 /// Create a new Project.
 /// </summary>
 /// <param name="Name"></param>
-public record MarkToDoItemCompleteCommand(int ProjectId, int ToDoItemId) : Ardalis.SharedKernel.ICommand<Result>;
+public record MarkToDoItemCompleteCommand(ProjectId ProjectId, int ToDoItemId) : ICommand<Result>;

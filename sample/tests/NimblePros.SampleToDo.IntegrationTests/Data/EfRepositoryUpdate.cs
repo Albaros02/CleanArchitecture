@@ -1,6 +1,4 @@
 ﻿using NimblePros.SampleToDo.Core.ProjectAggregate;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace NimblePros.SampleToDo.IntegrationTests.Data;
 
@@ -9,18 +7,19 @@ public class EfRepositoryUpdate : BaseEfRepoTestFixture
   [Fact]
   public async Task UpdatesItemAfterAddingIt()
   {
+    var cancellationToken = TestContext.Current.CancellationToken;
     // add a project
     var repository = GetRepository();
     var initialName = Guid.NewGuid().ToString();
-    var project = new Project(initialName, PriorityStatus.Backlog);
+    var project = new Project(ProjectName.From(initialName));
 
-    await repository.AddAsync(project);
+    await repository.AddAsync(project, cancellationToken);
 
     // detach the item so we get a different instance
     _dbContext.Entry(project).State = EntityState.Detached;
 
     // fetch the item and update its title
-    var newProject = (await repository.ListAsync())
+    var newProject = (await repository.ListAsync(cancellationToken))
         .FirstOrDefault(project => project.Name == initialName);
     if (newProject == null)
     {
@@ -29,18 +28,17 @@ public class EfRepositoryUpdate : BaseEfRepoTestFixture
     }
     Assert.NotSame(project, newProject);
     var newName = Guid.NewGuid().ToString();
-    newProject.UpdateName(newName);
+    newProject.UpdateName(ProjectName.From(newName));
 
     // Update the item
-    await repository.UpdateAsync(newProject);
+    await repository.UpdateAsync(newProject, cancellationToken);
 
     // Fetch the updated item
-    var updatedItem = (await repository.ListAsync())
+    var updatedItem = (await repository.ListAsync(cancellationToken))
         .FirstOrDefault(project => project.Name == newName);
 
     Assert.NotNull(updatedItem);
     Assert.NotEqual(project.Name, updatedItem?.Name);
-    Assert.Equal(project.Priority, updatedItem?.Priority);
     Assert.Equal(newProject.Id, updatedItem?.Id);
   }
 }

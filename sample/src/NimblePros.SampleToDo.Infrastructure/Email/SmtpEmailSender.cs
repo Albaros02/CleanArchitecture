@@ -1,9 +1,8 @@
-﻿using System.Net.Mail;
-using NimblePros.SampleToDo.Core.Interfaces;
-using Microsoft.Extensions.Logging;
+﻿using NimblePros.SampleToDo.Core.Interfaces;
 
 namespace NimblePros.SampleToDo.Infrastructure.Email;
 
+[Obsolete("Use MimeKitEmailSender instead")]
 public class SmtpEmailSender : IEmailSender
 {
   private readonly ILogger<SmtpEmailSender> _logger;

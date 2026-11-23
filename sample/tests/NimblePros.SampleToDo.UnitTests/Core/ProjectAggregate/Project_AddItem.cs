@@ -1,20 +1,16 @@
 ﻿using NimblePros.SampleToDo.Core.ProjectAggregate;
-using Xunit;
 
 namespace NimblePros.SampleToDo.UnitTests.Core.ProjectAggregate;
 
 public class Project_AddItem
 {
-  private Project _testProject = new Project("some name", PriorityStatus.Backlog);
+  private Project _testProject = new Project(ProjectName.From("some name"));
 
   [Fact]
   public void AddsItemToItems()
   {
-    var _testItem = new ToDoItem
-    {
-      Title = "title",
-      Description = "description"
-    };
+    var _testItem = new ToDoItem(title: ToDoItemTitle.From("title"),
+      description: ToDoItemDescription.From("description"));
 
     _testProject.AddItem(_testItem);
 

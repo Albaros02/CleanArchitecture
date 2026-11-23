@@ -1,13 +1,6 @@
-﻿using Ardalis.SharedKernel;
+﻿namespace NimblePros.SampleToDo.Core.ProjectAggregate.Events;
 
-namespace NimblePros.SampleToDo.Core.ProjectAggregate.Events;
-
-public class ToDoItemCompletedEvent : DomainEventBase
+public sealed class ToDoItemCompletedEvent(ToDoItem completedItem) : DomainEventBase
 {
-  public ToDoItem CompletedItem { get; set; }
-
-  public ToDoItemCompletedEvent(ToDoItem completedItem)
-  {
-    CompletedItem = completedItem;
-  }
+  public ToDoItem CompletedItem { get; private set; } = completedItem;
 }

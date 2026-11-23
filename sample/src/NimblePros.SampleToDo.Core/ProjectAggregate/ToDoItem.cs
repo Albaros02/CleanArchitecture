@@ -1,18 +1,33 @@
-﻿using Ardalis.GuardClauses;
+﻿using System.Xml.Linq;
+using NimblePros.SampleToDo.Core.ContributorAggregate;
 using NimblePros.SampleToDo.Core.ProjectAggregate.Events;
-using Ardalis.SharedKernel;
 
 namespace NimblePros.SampleToDo.Core.ProjectAggregate;
 
-public class ToDoItem : EntityBase
+public class ToDoItem : EntityBase<ToDoItem, ToDoItemId>
 {
-  public string Title { get; set; } = string.Empty;
-  public string Description { get; set; } = string.Empty;
-  public int? ContributorId { get; private set; } // tasks don't have anyone assigned when first created
-  public bool IsDone { get; private set; }
-  // TODO: Move Priority to ToDoItem from Project
+  public ToDoItem() : this(Priority.Backlog)
+  {
+  }
+  public ToDoItem(ToDoItemTitle title, ToDoItemDescription description) : this(Priority.Backlog)
+  {
+    Title = title;
+    Description = description;
+  }
 
-  public void MarkComplete()
+  public ToDoItem(Priority priority)
+  {
+    Priority = priority;
+  }
+
+  public ToDoItemTitle Title { get; private set; }
+  public ToDoItemDescription Description { get; private set; }
+  public ContributorId? ContributorId { get; private set; } // tasks don't have anyone assigned when first created
+  public bool IsDone { get; private set; }
+
+  public Priority Priority { get; private set; }
+
+  public ToDoItem MarkComplete()
   {
     if (!IsDone)
     {
@@ -20,25 +35,42 @@ public class ToDoItem : EntityBase
 
       RegisterDomainEvent(new ToDoItemCompletedEvent(this));
     }
+    return this;
   }
 
-  public void AddContributor(int contributorId)
+  public ToDoItem AddContributor(ContributorId contributorId)
   {
     Guard.Against.Null(contributorId);
     ContributorId = contributorId;
 
     var contributorAddedToItem = new ContributorAddedToItemEvent(this, contributorId);
     base.RegisterDomainEvent(contributorAddedToItem);
+    return this;
   }
 
-  public void RemoveContributor()
+  public ToDoItem RemoveContributor()
   {
     ContributorId = null;
+    return this;
+  }
+
+  public ToDoItem UpdateTitle(ToDoItemTitle newTitle)
+  {
+    if (Title.Equals(newTitle)) return this;
+    Title = newTitle;
+    return this;
+  }
+
+  public ToDoItem UpdateDescription(ToDoItemDescription newDescription)
+  {
+    if (Description.Equals(newDescription)) return this;
+    Description = newDescription;
+    return this;
   }
 
   public override string ToString()
   {
     string status = IsDone ? "Done!" : "Not done.";
-    return $"{Id}: Status: {status} - {Title} - {Description}";
+    return $"{Id}: Status: {status} - {Title.Value} - Priority: {Priority}";
   }
 }

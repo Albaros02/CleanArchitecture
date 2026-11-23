@@ -1,24 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <WarningsAsErrors>NSDEPCOP01</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Projects\AddContributorToItem\**" />
+    <EmbeddedResource Remove="Projects\AddContributorToItem\**" />
+    <None Remove="Projects\AddContributorToItem\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Ardalis.Result" />
-    <PackageReference Include="MediatR" />
-    <PackageReference Include="MediatR.Extensions.Autofac.DependencyInjection" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="NimblePros.SharedKernel" />
+    <PackageReference Include="NsDepCop">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NimblePros.SampleToDo.Core\NimblePros.SampleToDo.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Projects\AddContributorToItem\" />
   </ItemGroup>
 
 </Project>

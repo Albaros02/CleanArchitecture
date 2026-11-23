@@ -1,0 +1,146 @@
+name: Publish Templates to NuGet
+
+# Publish on release, tags, or manual trigger only
+# Does NOT run on regular branch pushes (requires NUGET_USER secret)
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish-full:
+        description: 'Publish Full Clean Architecture Template'
+        required: true
+        type: boolean
+        default: false
+      publish-minimal:
+        description: 'Publish Minimal Clean Architecture Template'
+        required: true
+        type: boolean
+        default: false
+  release:
+    types: [published]
+
+env:
+  DOTNET_VERSION: '11.0.x'
+  DOTNET_QUALITY: 'ga'
+  PACK_OUTPUT: artifacts/packages
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # v6 uses Node.js 24 (v5 uses deprecated Node.js 20)
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # v5 uses Node.js 24
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
+
+      - name: Build Full Template Solution
+        run: dotnet build ./Clean.Architecture.slnx -c Release
+
+      - name: Test Full Template
+        run: dotnet test ./Clean.Architecture.slnx -c Release --no-build --verbosity normal
+
+      - name: Build MinimalClean Template Solution
+        run: dotnet build ./MinimalClean/MinimalClean.Architecture.slnx -c Release
+
+      - name: Test Template Installations
+        shell: pwsh
+        run: |
+          # Test Full Template
+          # Write-Host "Testing Full Clean Architecture Template..."
+          # dotnet new install .
+          # dotnet new clean-arch -o TestFullTemplate
+          # dotnet build TestFullTemplate/TestFullTemplate.slnx
+          # dotnet new uninstall Ardalis.CleanArchitecture.Template
+          # Remove-Item -Recurse -Force TestFullTemplate
+          
+          # Test Minimal Template
+          # Write-Host "Testing Minimal Clean Architecture Template..."
+          # dotnet new install ./MinimalClean
+          # dotnet new min-clean -o TestMinimalTemplate
+          # dotnet build TestMinimalTemplate/TestMinimalTemplate.slnx
+          # dotnet new uninstall Ardalis.MinimalClean.Template
+          # Remove-Item -Recurse -Force TestMinimalTemplate
+
+  package:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      # v6 uses Node.js 24 (v5 uses deprecated Node.js 20)
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      - name: Install Mono
+        run: sudo apt-get update && sudo apt-get install -y mono-complete          
+
+      - name: Create output directory
+        run: mkdir -p ${{ env.PACK_OUTPUT }}
+
+      - name: Pack Full Template
+        if: ${{ github.event_name == 'release' || github.event.inputs.publish-full == 'true' }}
+        run: nuget pack CleanArchitecture.nuspec -OutputDirectory ${{ env.PACK_OUTPUT }} -NoDefaultExcludes
+
+      - name: Pack Minimal Template
+        if: ${{ github.event_name == 'release' || github.event.inputs.publish-minimal == 'true' }}
+        run: nuget pack MinimalClean.nuspec -OutputDirectory ${{ env.PACK_OUTPUT }} -NoDefaultExcludes
+
+      # v5 uses Node.js 24 (v4 uses deprecated Node.js 20)
+      - name: Upload packages as artifacts
+        if: ${{ github.event_name == 'release' || github.event.inputs.publish-full == 'true' || github.event.inputs.publish-minimal == 'true' }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: nuget-packages
+          path: ${{ env.PACK_OUTPUT }}/*.nupkg
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'release' || github.event.inputs.publish-full == 'true' || github.event.inputs.publish-minimal == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      # v5 uses Node.js 24 (v4 uses deprecated Node.js 20)
+      - name: Download packages
+        uses: actions/download-artifact@v5
+        with:
+          name: nuget-packages
+          path: ${{ env.PACK_OUTPUT }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: ${{ env.DOTNET_QUALITY }}
+
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push packages to NuGet
+        shell: pwsh
+        run: |
+          Get-ChildItem "${{ env.PACK_OUTPUT }}" -Filter *.nupkg | ForEach-Object {
+            Write-Host "Publishing $($_.Name)..."
+            dotnet nuget push $_.FullName `
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" `
+              --source https://api.nuget.org/v3/index.json `
+              --skip-duplicate
+          }

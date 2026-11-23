@@ -1,36 +1,34 @@
-﻿using Ardalis.GuardClauses;
-using NimblePros.SampleToDo.Core.ProjectAggregate.Events;
-using Ardalis.SharedKernel;
+﻿using NimblePros.SampleToDo.Core.ProjectAggregate.Events;
 
 namespace NimblePros.SampleToDo.Core.ProjectAggregate;
 
-public class Project : EntityBase, IAggregateRoot
+public class Project : EntityBase<Project, ProjectId>, IAggregateRoot
 {
-  public string Name { get; private set; }
+  public ProjectName Name { get; private set; }
 
-  private readonly List<ToDoItem> _items = new();
+  private readonly List<ToDoItem> _items = [];
   public IEnumerable<ToDoItem> Items => _items.AsReadOnly();
   public ProjectStatus Status => _items.All(i => i.IsDone) ? ProjectStatus.Complete : ProjectStatus.InProgress;
 
-  public PriorityStatus Priority { get; }
-
-  public Project(string name, PriorityStatus priority)
+  public Project(ProjectName name)
   {
-    Name = Guard.Against.NullOrEmpty(name, nameof(name));
-    Priority = priority;
+    Name = name;
   }
 
-  public void AddItem(ToDoItem newItem)
+  public Project AddItem(ToDoItem newItem)
   {
-    Guard.Against.Null(newItem, nameof(newItem));
+    Guard.Against.Null(newItem);
     _items.Add(newItem);
 
     var newItemAddedEvent = new NewItemAddedEvent(this, newItem);
     base.RegisterDomainEvent(newItemAddedEvent);
+    return this;
   }
 
-  public void UpdateName(string newName)
+  public Project UpdateName(ProjectName newName)
   {
-    Name = Guard.Against.NullOrEmpty(newName, nameof(newName));
+    if (Name.Equals(newName)) return this;
+    Name = newName;
+    return this;
   }
 }

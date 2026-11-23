@@ -1,20 +1,24 @@
-﻿using Ardalis.GuardClauses;
-using Ardalis.SharedKernel;
+﻿using Clean.Architecture.Core.ContributorAggregate.Events;
 
 namespace Clean.Architecture.Core.ContributorAggregate;
 
-public class Contributor : EntityBase, IAggregateRoot
+public class Contributor(ContributorName name) : EntityBase<Contributor, ContributorId>, IAggregateRoot
 {
-  public string Name { get; private set; }
+  public ContributorName Name { get; private set; } = name;
   public ContributorStatus Status { get; private set; } = ContributorStatus.NotSet;
+  public PhoneNumber? PhoneNumber { get; private set; }
 
-  public Contributor(string name)
+  public Contributor UpdatePhoneNumber(PhoneNumber newPhoneNumber)
   {
-    Name = Guard.Against.NullOrEmpty(name, nameof(name));
+    PhoneNumber = newPhoneNumber;
+    return this;
   }
 
-  public void UpdateName(string newName)
+  public Contributor UpdateName(ContributorName newName)
   {
-    Name = Guard.Against.NullOrEmpty(newName, nameof(newName));
+    if (Name == newName) return this;
+    Name = newName;
+    RegisterDomainEvent(new ContributorNameUpdatedEvent(this));
+    return this;
   }
 }

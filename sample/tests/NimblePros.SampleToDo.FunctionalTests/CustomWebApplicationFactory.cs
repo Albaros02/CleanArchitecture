@@ -1,12 +1,8 @@
-﻿using NimblePros.SampleToDo.Infrastructure.Data;
+﻿using NimblePros.SampleToDo.Core.ContributorAggregate;
+using NimblePros.SampleToDo.Infrastructure;
+using NimblePros.SampleToDo.Infrastructure.Data;
+using NimblePros.SampleToDo.UseCases.Contributors.Commands.Create;
 using NimblePros.SampleToDo.Web;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using NimblePros.SampleToDo.UseCases.Contributors.Create;
 
 namespace NimblePros.SampleToDo.FunctionalTests;
 
@@ -20,7 +16,7 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
   /// <returns></returns>
   protected override IHost CreateHost(IHostBuilder builder)
   {
-    builder.UseEnvironment("Development"); // will not send real emails
+    builder.UseEnvironment("Testing"); // will not send real emails
     var host = builder.Build();
     host.Start();
 
@@ -46,7 +42,7 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
         //if (!db.ToDoItems.Any())
         //{
         // Seed the database with test data.
-        SeedData.PopulateTestData(db);
+        SeedData.PopulateTestDataAsync(db).GetAwaiter().GetResult();
         //}
       }
       catch (Exception ex)
@@ -65,11 +61,12 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
         .ConfigureServices(services =>
         {
           // Remove the app's ApplicationDbContext registration.
-          var descriptor = services.SingleOrDefault(
-          d => d.ServiceType ==
-              typeof(DbContextOptions<AppDbContext>));
+          var descriptors = services.Where(
+            d => d.ServiceType == typeof(AppDbContext) ||
+                 d.ServiceType == typeof(DbContextOptions<AppDbContext>))
+                .ToList();
 
-          if (descriptor != null)
+          foreach (var descriptor in descriptors)
           {
             services.Remove(descriptor);
           }
@@ -80,15 +77,19 @@ public class CustomWebApplicationFactory<TProgram> : WebApplicationFactory<TProg
           // Add ApplicationDbContext using an in-memory database for testing.
           services.AddDbContext<AppDbContext>(options =>
           {
-            options.UseInMemoryDatabase(inMemoryCollectionName);
+            options.UseInMemoryDatabase(inMemoryCollectionName).LogTo(s => Console.WriteLine(s));
           });
 
-          // Add MediatR
-          services.AddMediatR(cfg =>
+          // Add Mediator
+          services.AddMediator(options =>
           {
-            cfg.RegisterServicesFromAssemblies(typeof(Program).Assembly,
-              typeof(CreateContributorCommand).Assembly,
-              typeof(AppDbContext).Assembly);
+            options.ServiceLifetime = ServiceLifetime.Scoped;
+            options.Assemblies =
+            [
+              typeof(Contributor),                    // Core
+              typeof(CreateContributorCommand),       // UseCases
+              typeof(InfrastructureServiceExtensions) // Infrastructure
+            ];
           });
         });
   }

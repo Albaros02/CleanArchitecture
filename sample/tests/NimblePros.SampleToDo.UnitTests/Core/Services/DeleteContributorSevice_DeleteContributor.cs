@@ -1,10 +1,5 @@
 ﻿using NimblePros.SampleToDo.Core.ContributorAggregate;
 using NimblePros.SampleToDo.Core.Services;
-using Ardalis.SharedKernel;
-using MediatR;
-using Xunit;
-using Microsoft.Extensions.Logging;
-using NSubstitute;
 
 namespace NimblePros.SampleToDo.UnitTests.Core.Services;
 
@@ -24,8 +19,8 @@ public class DeleteContributorService_DeleteContributor
   [Fact]
   public async Task ReturnsNotFoundGivenCantFindContributor()
   {
-    var result = await _service.DeleteContributor(0);
+    var result = await _service.DeleteContributor(ContributorId.From(9999));
 
-    Assert.Equal(Ardalis.Result.ResultStatus.NotFound, result.Status);
+    Assert.Equal(ResultStatus.NotFound, result.Status);
   }
 }

@@ -1,104 +1,106 @@
-﻿using Ardalis.ListStartupServices;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using NimblePros.SampleToDo.Core;
-using NimblePros.SampleToDo.Infrastructure;
+﻿using System.Text;
+using AspNetCore.Localizer.Json.Extensions;
+using Microsoft.Extensions.Localization;
+using NimblePros.Metronome;
+using NimblePros.SampleToDo.Core.ProjectAggregate;
 using NimblePros.SampleToDo.Infrastructure.Data;
-using NimblePros.SampleToDo.Web;
-using FastEndpoints;
-using FastEndpoints.Swagger;
-using FastEndpoints.ApiExplorer;
-using Serilog;
-using Microsoft.EntityFrameworkCore;
+using NimblePros.SampleToDo.Web.Configurations;
+using NimblePros.SampleToDo.Web.Projects;
 
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-
-builder.Host.UseSerilog((_, config) => config.ReadFrom.Configuration(builder.Configuration));
-
-builder.Services.Configure<CookiePolicyOptions>(options =>
+public partial class Program
 {
-  options.CheckConsentNeeded = context => true;
-  options.MinimumSameSitePolicy = SameSiteMode.None;
-});
-
-string? connectionString = builder.Configuration.GetConnectionString("SqliteConnection");
-builder.Services.AddDbContext<AppDbContext>(options =>
-          options.UseSqlite(connectionString));
-
-builder.Services.AddFastEndpoints();
-//builder.Services.AddFastEndpointsApiExplorer();
-builder.Services.SwaggerDocument(o =>
-{
-  o.ShortSchemaNames = true;
-});
-
-//builder.Services.AddSwaggerGen(c =>
-//{
-//  c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
-//  c.EnableAnnotations();
-//  string xmlCommentFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "swagger-docs.xml");
-//  c.IncludeXmlComments(xmlCommentFilePath);
-//  c.OperationFilter<FastEndpointsOperationFilter>();
-//});
-
-// add list services for diagnostic purposes - see https://github.com/ardalis/AspNetCoreStartupServices
-builder.Services.Configure<ServiceConfig>(config =>
-{
-  config.Services = new List<ServiceDescriptor>(builder.Services);
-
-  // optional - default path to view services is /listallservices - recommended to choose your own path
-  config.Path = "/listservices";
-});
-
-
-builder.Host.ConfigureContainer<ContainerBuilder>(containerBuilder =>
-{
-  containerBuilder.RegisterModule(new DefaultCoreModule());
-  containerBuilder.RegisterModule(new AutofacInfrastructureModule(builder.Environment.IsDevelopment()));
-});
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-  app.UseDeveloperExceptionPage();
-  app.UseShowAllServicesMiddleware(); // see https://github.com/ardalis/AspNetCoreStartupServices
-}
-else
-{
-  app.UseDefaultExceptionHandler(); // from FastEndpoints
-  app.UseHsts();
-}
-app.UseFastEndpoints();
-app.UseSwaggerGen(); // FastEndpoints middleware
-
-app.UseHttpsRedirection();
-
-// Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), specifying the Swagger JSON endpoint.
-//app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1"));
-
-// Seed Database
-using (var scope = app.Services.CreateScope())
-{
-  var services = scope.ServiceProvider;
-
-  try
+  private static async Task Main(string[] args)
   {
-    var context = services.GetRequiredService<AppDbContext>();
-    //                    context.Database.Migrate();
-    context.Database.EnsureCreated();
-    SeedData.Initialize(services);
-  }
-  catch (Exception ex)
-  {
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred seeding the DB. {exceptionMessage}", ex.Message);
+    var builder = WebApplication.CreateBuilder(args);
+    builder.WebHost.ConfigureKestrel(o =>
+    {
+      o.AddServerHeader = false; // <- removes "Server: Kestrel"
+    });
+    builder.AddServiceDefaults();
+
+
+    var logger = Log.Logger = new LoggerConfiguration()
+      .Enrich.FromLogContext()
+      .WriteTo.Console()
+      .CreateLogger();
+
+    logger.Information("Starting web host");
+
+    builder.AddLoggerConfigs();
+
+    var appLogger = new SerilogLoggerFactory(logger)
+        .CreateLogger<Program>();
+
+    builder.Services.AddOptionConfigs(builder.Configuration, appLogger, builder);
+
+    builder.Services.AddServiceConfigs(appLogger, builder);
+
+    builder.Services.AddFastEndpoints()
+                    .SwaggerDocument(o =>
+                    {
+                      o.ShortSchemaNames = true;
+                    });
+
+    if (!builder.Environment.EnvironmentName.Equals("Testing"))
+    {
+      var connectionString = builder.Configuration.GetConnectionString("SqliteConnection");
+      builder.Services.AddDbContext<AppDbContext>(options =>
+                options.UseSqlite(connectionString));
+    }
+
+    builder.Services.AddMemoryCache();
+
+    // add list services for diagnostic purposes - see https://github.com/ardalis/AspNetCoreStartupServices
+    builder.Services.Configure((Ardalis.ListStartupServices.ServiceConfig config) =>
+    {
+      config.Services = new List<ServiceDescriptor>(builder.Services);
+
+      // optional - default path to view services is /listallservices - recommended to choose your own path
+      config.Path = "/listservices";
+    });
+
+    // track db and external service calls
+    builder.Services.AddMetronome();
+
+    // Add localization with the JSON path
+    builder.Services.AddLocalization(options => options.ResourcesPath = "i18n");
+
+    // ----- Add JSON-specific localization
+    builder.Services.AddJsonLocalization(options =>
+    {
+      options.ResourcesPath = "i18n";  // Path to the JSON files (e.g., i18n/en/Project.json)
+      options.CacheDuration = TimeSpan.FromHours(1);  // Optional: Cache for performance
+      options.FileEncoding = Encoding.UTF8; //Optional: Specify file encoding
+    });
+
+    // ----- Register the typed localizer for the Project aggregate -----
+    builder.Services.AddSingleton<IStringLocalizer>(sp =>
+    {
+      var factory = sp.GetRequiredService<IStringLocalizerFactory>();
+      // Creates a localizer for 'ProjectAggregate' – loads from i18n/{culture}/Project.json
+      return factory.Create(typeof(ProjectErrorMessages));
+    });
+
+    var app = builder.Build();
+
+    // ----- Set the static holder for Core access -----
+    var localizer = app.Services.GetRequiredService<IStringLocalizer>();
+    Localization.Current = new Localization.LocalizationContext(localizer);
+
+    // ----- Add request localization middleware (before app.Run()) -----
+    var supportedCultures = new[] { "en", "fr", "fa" };  // Add your cultures
+    var localizationOptions = new RequestLocalizationOptions()
+        .SetDefaultCulture(supportedCultures[0])
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures);
+    app.UseRequestLocalization(localizationOptions);
+
+    // see Configurations/MiddlewareConfig.cs  
+    await app.UseAppMiddleware();
+
+    app.Run();
   }
 }
-
-app.Run();
 
 // Make the implicit Program.cs class public, so integration tests can reference the correct assembly for host building
 public partial class Program

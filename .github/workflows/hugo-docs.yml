@@ -1,0 +1,78 @@
+# The docs moved to Cloudflare Pages: https://cleanarchitecture.ardalis.com/
+# This workflow replaces the old GitHub Pages site (ardalis.github.io/CleanArchitecture)
+# with a redirect stub so existing links keep working. Every path, including deep
+# links like /CleanArchitecture/migration-guides/, forwards to the same path on the
+# new domain (index.html for the root, 404.html for everything else).
+name: Deploy docs redirect to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/hugo-docs.yml'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  NEW_DOCS_ORIGIN: https://cleanarchitecture.ardalis.com
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate redirect site
+        run: |
+          mkdir -p site
+          cat > site/index.html <<EOF
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>Clean Architecture docs have moved</title>
+            <link rel="canonical" href="${NEW_DOCS_ORIGIN}/">
+            <meta name="robots" content="noindex">
+            <script>
+              (function () {
+                var path = location.pathname.replace(/^\/CleanArchitecture/i, '') || '/';
+                location.replace('${NEW_DOCS_ORIGIN}' + path + location.search + location.hash);
+              })();
+            </script>
+            <!-- Fallback when JavaScript is disabled: send to the new site root -->
+            <noscript><meta http-equiv="refresh" content="0; url=${NEW_DOCS_ORIGIN}/"></noscript>
+          </head>
+          <body>
+            <p>The Clean Architecture docs have moved to
+              <a href="${NEW_DOCS_ORIGIN}/">${NEW_DOCS_ORIGIN#https://}</a>.</p>
+          </body>
+          </html>
+          EOF
+          cp site/index.html site/404.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

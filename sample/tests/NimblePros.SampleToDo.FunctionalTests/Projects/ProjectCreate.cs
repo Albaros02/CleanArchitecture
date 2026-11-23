@@ -1,7 +1,5 @@
-﻿using Ardalis.HttpClientTestExtensions;
-using FluentAssertions;
-using NimblePros.SampleToDo.Web.Projects;
-using Xunit;
+﻿using NimblePros.SampleToDo.Web.Projects;
+using Shouldly;
 
 namespace NimblePros.SampleToDo.FunctionalTests.Projects;
 
@@ -23,9 +21,9 @@ public class ProjectCreate : IClassFixture<CustomWebApplicationFactory<Program>>
     var content = StringContentHelpers.FromModelAsJson(request);
 
     var result = await _client.PostAndDeserializeAsync<CreateProjectResponse>(
-      CreateProjectRequest.Route, content);
+        CreateProjectRequest.Route, content);
 
-    result.Name.Should().Be(testName);
-    result.Id.Should().BeGreaterThan(0);
+    result.Name.ShouldBe(testName);
+    result.Id.ShouldBeGreaterThan(0);
   }
 }

@@ -1,0 +1,15 @@
+﻿using Vogen;
+
+namespace NimblePros.SampleToDo.Core.ContributorAggregate;
+
+[ValueObject<string>(conversions: Conversions.SystemTextJson)]
+public partial struct ContributorName
+{
+  public const int MaxLength = 100;
+  private static Validation Validate(in string name) =>
+    string.IsNullOrWhiteSpace(name)
+      ? Validation.Invalid("Name cannot be empty")
+      : name.Length > MaxLength
+        ? Validation.Invalid($"Name cannot be longer than {MaxLength} characters")
+        : Validation.Ok;
+}

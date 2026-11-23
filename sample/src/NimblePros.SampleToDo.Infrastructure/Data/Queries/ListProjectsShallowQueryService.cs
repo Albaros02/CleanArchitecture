@@ -1,22 +1,17 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using NimblePros.SampleToDo.UseCases.Projects;
 using NimblePros.SampleToDo.UseCases.Projects.ListShallow;
-using NimblePros.SampleToDo.UseCases.Projects;
 
 namespace NimblePros.SampleToDo.Infrastructure.Data.Queries;
 
-public class ListProjectsShallowQueryService : IListProjectsShallowQueryService
+public class ListProjectsShallowQueryService(AppDbContext db) : 
+  IListProjectsShallowQueryService
 {
-  private readonly AppDbContext _db;
+  private readonly AppDbContext _db = db;
 
-  public ListProjectsShallowQueryService(AppDbContext db)
+  public async Task<IEnumerable<ProjectDto>> ListAsync()
   {
-    _db = db;
-  }
-
-  public async Task<IEnumerable<ProjectDTO>> ListAsync()
-  {
-    var result = await _db.Projects.FromSqlRaw("SELECT Id, Name, Status FROM Projects") // don't fetch other big columns
-      .Select(x => new ProjectDTO(x.Id, x.Name, x.Status.ToString()))
+    var result = await _db.Projects.FromSqlRaw("SELECT Id, Name FROM Projects") // don't fetch other big columns
+      .Select(x => new ProjectDto(x.Id.Value, x.Name.Value, x.Status.ToString()))
       .ToListAsync();
 
     return result;

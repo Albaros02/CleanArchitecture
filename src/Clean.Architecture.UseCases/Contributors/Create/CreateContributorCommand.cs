@@ -1,4 +1,4 @@
-﻿using Ardalis.Result;
+﻿using Clean.Architecture.Core.ContributorAggregate;
 
 namespace Clean.Architecture.UseCases.Contributors.Create;
 
@@ -6,4 +6,4 @@ namespace Clean.Architecture.UseCases.Contributors.Create;
 /// Create a new Contributor.
 /// </summary>
 /// <param name="Name"></param>
-public record CreateContributorCommand(string Name) : Ardalis.SharedKernel.ICommand<Result<int>>;
+public record CreateContributorCommand(ContributorName Name, string? PhoneNumber) : ICommand<Result<ContributorId>>;

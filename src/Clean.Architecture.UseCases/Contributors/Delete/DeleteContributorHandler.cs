@@ -1,31 +1,20 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
-using Clean.Architecture.Core.Interfaces;
+﻿using Clean.Architecture.Core.Interfaces;
 
 namespace Clean.Architecture.UseCases.Contributors.Delete;
 
-public class DeleteContributorHandler : ICommandHandler<DeleteContributorCommand, Result>
+public class DeleteContributorHandler(IDeleteContributorService _deleteContributorService)
+  : ICommandHandler<DeleteContributorCommand, Result>
 {
-  private readonly IDeleteContributorService _deleteContributorService;
-
-  public DeleteContributorHandler(IDeleteContributorService deleteContributorService)
-  {
-    _deleteContributorService = deleteContributorService;
-  }
-
-  public async Task<Result> Handle(DeleteContributorCommand request, CancellationToken cancellationToken)
-  {
+  public async ValueTask<Result> Handle(DeleteContributorCommand request, CancellationToken cancellationToken) =>
     // This Approach: Keep Domain Events in the Domain Model / Core project; this becomes a pass-through
-    return await _deleteContributorService.DeleteContributor(request.ContributorId);
+    // This is @ardalis's preferred approach
+    await _deleteContributorService.DeleteContributor(request.ContributorId);
 
     // Another Approach: Do the real work here including dispatching domain events - change the event from internal to public
-    // Ardalis prefers using the service so that "domain event" behavior remains in the domain model / core project
+    // @ardalis prefers using the service above so that **domain** event behavior remains in the **domain model** (core project)
     // var aggregateToDelete = await _repository.GetByIdAsync(request.ContributorId);
     // if (aggregateToDelete == null) return Result.NotFound();
-
     // await _repository.DeleteAsync(aggregateToDelete);
     // var domainEvent = new ContributorDeletedEvent(request.ContributorId);
-    // await _mediator.Publish(domainEvent);
-    // return Result.Success();
-  }
+    // await _mediator.Publish(domainEvent);// return Result.Success();
 }

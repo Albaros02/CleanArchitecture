@@ -1,18 +1,11 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
+﻿namespace NimblePros.SampleToDo.UseCases.Projects.ListShallow;
 
-namespace NimblePros.SampleToDo.UseCases.Projects.ListShallow;
-
-public class ListProjectsShallowHandler : IQueryHandler<ListProjectsShallowQuery, Result<IEnumerable<ProjectDTO>>>
+public class ListProjectsShallowHandler(IListProjectsShallowQueryService query)
+  : IQueryHandler<ListProjectsShallowQuery, Result<IEnumerable<ProjectDto>>>
 {
-  private readonly IListProjectsShallowQueryService _query;
+  private readonly IListProjectsShallowQueryService _query = query;
 
-  public ListProjectsShallowHandler(IListProjectsShallowQueryService query)
-  {
-    _query = query;
-  }
-
-  public async Task<Result<IEnumerable<ProjectDTO>>> Handle(ListProjectsShallowQuery request, CancellationToken cancellationToken)
+  public async ValueTask<Result<IEnumerable<ProjectDto>>> Handle(ListProjectsShallowQuery request, CancellationToken cancellationToken)
   {
     var result = await _query.ListAsync();
 

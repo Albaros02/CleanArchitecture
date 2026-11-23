@@ -1,22 +1,16 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
-using NimblePros.SampleToDo.Core.ProjectAggregate;
+﻿using NimblePros.SampleToDo.Core.ProjectAggregate;
 
 namespace NimblePros.SampleToDo.UseCases.Projects.Create;
 
-public class CreateProjectHandler : ICommandHandler<CreateProjectCommand, Result<int>>
+public class CreateProjectHandler(IRepository<Project> repository) : ICommandHandler<CreateProjectCommand, Result<ProjectId>>
 {
-  private readonly IRepository<Project> _repository;
+  private readonly IRepository<Project> _repository = repository;
 
-  public CreateProjectHandler(IRepository<Project> repository)
-  {
-    _repository = repository;
-  }
-
-  public async Task<Result<int>> Handle(CreateProjectCommand request,
+  public async ValueTask<Result<ProjectId>> Handle(CreateProjectCommand request,
     CancellationToken cancellationToken)
   {
-    var newProject = new Project(request.Name, PriorityStatus.Backlog);
+    var newProject = new Project(request.Name);
+    // NOTE: This implementation issues 3 queries due to Vogen implementation
     var createdItem = await _repository.AddAsync(newProject, cancellationToken);
 
     return createdItem.Id;

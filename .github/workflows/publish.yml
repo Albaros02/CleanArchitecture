@@ -1,23 +1,82 @@
-name: publish Ardalis.CleanArchitecture Template to nuget
+name: Publish to Nuget
+
+# Publish on release, tags, or manual trigger only
+# Does NOT run on regular branch pushes (requires NUGET_USER secret)
 on:
   push:
-    branches:
-      - main # Your default release branch
-    paths:
-      - 'CleanArchitecture.nuspec'
-jobs:
-  publish:
-    name: list on nuget
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
+    tags:
+      - 'v*'  # Version tags trigger actual publish
+  workflow_dispatch:  # Manual trigger for on-demand publishing
+  release:
+    types: [published]  # GitHub Release triggers publish
 
-      - uses: nuget/setup-nuget@v1
+env:
+  SOLUTION_FILE: Clean.Architecture.slnx
+  NUSPEC_FILE: CleanArchitecture.nuspec
+  PACK_OUTPUT: artifacts/package/release
+
+jobs:
+  build:
+    # OIDC authentication requires id-token write permission
+    permissions:
+      contents: read
+      id-token: write  # Required for NuGet OIDC authentication
+    runs-on: ubuntu-latest
+
+    steps:
+      # v6 uses Node.js 24 (v4 uses deprecated Node.js 20)
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # v5 uses Node.js 24, 'ga' ensures stable .NET 11 release
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v5
         with:
-          nuget-version: '5.x'
-          
-      - name: Package the template
-        run: nuget pack CleanArchitecture.nuspec -NoDefaultExcludes
-        
-      - name: Publish to nuget.org
-        run: nuget push Ardalis.CleanArchitecture.Template.*.nupkg -src https://api.nuget.org/v3/index.json ${{secrets.NUGET_API_KEY}}
+          dotnet-version: '11.0.x'
+          dotnet-quality: 'ga'  # General Availability - stable release
+
+      # Explicit restore allows --no-restore in build step (faster)
+      - name: Restore dependencies
+        run: dotnet restore "${{ env.SOLUTION_FILE }}"
+
+      # --no-restore skips redundant package restore
+      - name: Build
+        run: dotnet build "${{ env.SOLUTION_FILE }}" --configuration Release --no-restore
+
+      # Validate tests pass before publishing
+      - name: Test
+        run: dotnet test "${{ env.SOLUTION_FILE }}" --configuration Release --no-build --verbosity normal
+
+      # NuGet CLI needed for .nuspec packaging (dotnet pack doesn't support nuspec)
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      # Mono required for nuget.exe on Linux
+      - name: Install Mono
+        run: sudo apt-get update && sudo apt-get install -y mono-complete
+
+      # Create NuGet package from .nuspec file
+      - name: Pack (nuspec)
+        run: nuget pack "${{ env.NUSPEC_FILE }}" -OutputDirectory "${{ env.PACK_OUTPUT }}" -NoDefaultExcludes
+
+      # OIDC authentication - more secure than storing API keys as secrets
+      - name: NuGet login (OIDC)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # Only publish on release or version tag - prevents accidental publishes
+      # --skip-duplicate allows re-running workflow without errors
+      - name: Push to NuGet
+        if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') }}
+        shell: pwsh
+        run: |
+          Get-ChildItem "${{ env.PACK_OUTPUT }}" -Filter *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName `
+              --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" `
+              --source https://api.nuget.org/v3/index.json `
+              --skip-duplicate
+          }

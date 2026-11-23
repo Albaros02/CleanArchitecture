@@ -1,16 +1,11 @@
-﻿using Ardalis.SharedKernel;
+﻿using Microsoft.Extensions.Logging;
 using NimblePros.SampleToDo.Core.ContributorAggregate.Events;
 using NimblePros.SampleToDo.Core.ProjectAggregate;
 using NimblePros.SampleToDo.Core.ProjectAggregate.Specifications;
-using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace NimblePros.SampleToDo.Core.ContributorAggregate.Handlers;
 
-/// <summary>
-/// NOTE: Internal because ContributorDeleted is also marked as internal.
-/// </summary>
-internal class ContributorDeletedHandler : INotificationHandler<ContributorDeletedEvent>
+public class ContributorDeletedHandler : INotificationHandler<ContributorDeletedEvent>
 {
   private readonly IRepository<Project> _repository;
   private readonly ILogger<ContributorDeletedHandler> _logger;
@@ -22,7 +17,7 @@ internal class ContributorDeletedHandler : INotificationHandler<ContributorDelet
     _logger = logger;
   }
 
-  public async Task Handle(ContributorDeletedEvent domainEvent, CancellationToken cancellationToken)
+  public async ValueTask Handle(ContributorDeletedEvent domainEvent, CancellationToken cancellationToken)
   {
     _logger.LogInformation("Removing deleted contributor {contributorId} from all projects...", domainEvent.ContributorId);
     // Perform eventual consistency removal of contributors from projects when one is deleted

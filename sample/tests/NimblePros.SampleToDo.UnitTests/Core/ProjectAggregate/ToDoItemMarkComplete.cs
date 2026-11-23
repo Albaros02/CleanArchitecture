@@ -1,5 +1,4 @@
 ﻿using NimblePros.SampleToDo.Core.ProjectAggregate.Events;
-using Xunit;
 
 namespace NimblePros.SampleToDo.UnitTests.Core.ProjectAggregate;
 
@@ -10,7 +9,6 @@ public class ToDoItemMarkComplete
   {
     var item = new ToDoItemBuilder()
         .WithDefaultValues()
-        .Description("")
         .Build();
 
     item.MarkComplete();

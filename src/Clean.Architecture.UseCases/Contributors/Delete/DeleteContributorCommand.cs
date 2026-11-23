@@ -1,6 +1,5 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
+﻿using Clean.Architecture.Core.ContributorAggregate;
 
 namespace Clean.Architecture.UseCases.Contributors.Delete;
 
-public record DeleteContributorCommand(int ContributorId) : ICommand<Result>;
+public record DeleteContributorCommand(ContributorId ContributorId) : ICommand<Result>;

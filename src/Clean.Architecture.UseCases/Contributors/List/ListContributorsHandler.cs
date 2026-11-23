@@ -1,9 +1,6 @@
-﻿using Ardalis.Result;
-using Ardalis.SharedKernel;
+﻿namespace Clean.Architecture.UseCases.Contributors.List;
 
-namespace Clean.Architecture.UseCases.Contributors.List;
-
-public class ListContributorsHandler : IQueryHandler<ListContributorsQuery, Result<IEnumerable<ContributorDTO>>>
+public class ListContributorsHandler : IQueryHandler<ListContributorsQuery, Result<PagedResult<ContributorDto>>>
 {
   private readonly IListContributorsQueryService _query;
 
@@ -12,9 +9,11 @@ public class ListContributorsHandler : IQueryHandler<ListContributorsQuery, Resu
     _query = query;
   }
 
-  public async Task<Result<IEnumerable<ContributorDTO>>> Handle(ListContributorsQuery request, CancellationToken cancellationToken)
+  public async ValueTask<Result<PagedResult<ContributorDto>>> Handle(ListContributorsQuery request,
+                                                                     CancellationToken cancellationToken)
   {
-    var result = await _query.ListAsync();
+
+    var result = await _query.ListAsync(request.Page ?? 1, request.PerPage ?? Constants.DEFAULT_PAGE_SIZE);
 
     return Result.Success(result);
   }

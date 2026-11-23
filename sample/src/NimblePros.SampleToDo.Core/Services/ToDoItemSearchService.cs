@@ -1,8 +1,6 @@
-﻿using Ardalis.Result;
-using NimblePros.SampleToDo.Core.Interfaces;
+﻿using NimblePros.SampleToDo.Core.Interfaces;
 using NimblePros.SampleToDo.Core.ProjectAggregate;
 using NimblePros.SampleToDo.Core.ProjectAggregate.Specifications;
-using Ardalis.SharedKernel;
 
 namespace NimblePros.SampleToDo.Core.Services;
 
@@ -15,7 +13,7 @@ public class ToDoItemSearchService : IToDoItemSearchService
     _repository = repository;
   }
 
-  public async Task<Result<List<ToDoItem>>> GetAllIncompleteItemsAsync(int projectId, string searchString)
+  public async Task<Result<List<ToDoItem>>> GetAllIncompleteItemsAsync(ProjectId projectId, string searchString)
   {
     if (string.IsNullOrEmpty(searchString))
     {
@@ -46,11 +44,11 @@ public class ToDoItemSearchService : IToDoItemSearchService
     catch (Exception ex)
     {
       // TODO: Log details here
-      return Result<List<ToDoItem>>.Error(new[] { ex.Message });
+      return Result<List<ToDoItem>>.Error( ex.Message );
     }
   }
 
-  public async Task<Result<ToDoItem>> GetNextIncompleteItemAsync(int projectId)
+  public async Task<Result<ToDoItem>> GetNextIncompleteItemAsync(ProjectId projectId)
   {
     var projectSpec = new ProjectByIdWithItemsSpec(projectId);
     var project = await _repository.FirstOrDefaultAsync(projectSpec);

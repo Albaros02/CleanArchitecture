@@ -1,7 +1,5 @@
-﻿using Ardalis.HttpClientTestExtensions;
-using NimblePros.SampleToDo.Web;
+﻿using NimblePros.SampleToDo.Web;
 using NimblePros.SampleToDo.Web.Contributors;
-using Xunit;
 
 namespace NimblePros.SampleToDo.FunctionalTests.Contributors;
 
@@ -18,10 +16,10 @@ public class ContributorDelete : IClassFixture<CustomWebApplicationFactory<Progr
   [Fact]
   public async Task DeletesExistingContributor()
   {
-    var deleteRoute = DeleteContributorRequest.BuildRoute(SeedData.Contributor1.Id);
+    var deleteRoute = DeleteContributorRequest.BuildRoute(SeedData.Contributor1.Id.Value);
     _ = await _client.DeleteAndEnsureNoContentAsync(deleteRoute);
 
-    string getRoute = GetContributorByIdRequest.BuildRoute(SeedData.Contributor1.Id);
+    string getRoute = GetContributorByIdRequest.BuildRoute(SeedData.Contributor1.Id.Value);
     _ = await _client.GetAndEnsureNotFoundAsync(getRoute);
   }
 
